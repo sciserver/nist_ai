@@ -1,0 +1,123 @@
+
+#metadata-tags {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 10px 30px;
+}
+
+.metadata-tag {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 30px;
+}
+
+.metadata-tag, #plus-container {
+    background-color: #c1acac;
+    border-radius: 30px;
+    margin: 5px;
+}
+
+/* delete & plus icons */
+
+.delete-container, #plus-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.delete-container {
+    background: none !important;
+    border: 0px solid black;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+}
+
+#plus-container {
+    width: 30px;
+    height: 30px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.delete, .plus {
+    padding: 0;
+    margin: 0;
+}
+
+.delete {
+    width: 50%;
+    padding: 0;
+    margin: 0;
+    filter: brightness(0) invert(1);
+}
+
+.plus {
+    width: 60%;
+    margin: 3px;
+    filter: brightness(0) invert(1);
+
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+}
+
+.rotate90:hover > * {
+    -webkit-transform: rotate(90deg);
+    -moz-transform: rotate(90deg);
+    -o-transform: rotate(90deg);
+    transform: rotate(90deg);
+}
+
+.delete-container:hover > .delete, #plus-container:hover > .plus {
+    -webkit-transition-duration: 0.5s;
+    -moz-transition-duration: 0.5s;
+    -o-transition-duration: 0.5s;
+    transition-duration: 0.5s;
+}
+.delete-container:hover > .delete {
+    width: 57%;
+}
+#plus-container:hover > .plus {
+    width: 67%;
+    -webkit-transform: rotate(135deg);
+    -moz-transform: rotate(135deg);
+    -o-transform: rotate(135deg);
+    transform: rotate(135deg);
+}
+
+/* input sizer to make key & val's dynamically grow */
+
+.key, .val {
+    border-radius: 30px;
+}
+
+.input-sizer {
+    display: inline-grid;
+}
+
+.input-sizer::after, .key, .val {
+    grid-area: 1 / 1;
+    padding: 1px 0 1px 7px;
+    border: none;
+    width: auto;
+    min-width: 10px;
+}
+
+.input-sizer::after {
+    content: attr(data-value) "||";
+    visibility: hidden;
+    color: red;
+    opacity: 0.5;
+    white-space: pre;
+}

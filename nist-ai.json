@@ -1,0 +1,3 @@
+{"user":"nist_ai_user","pwd":"LIUEkiwsdkuynwxe",
+"host":"xmatch02","port":"1433","database":"NIST_AI",
+"pymssql":"mssql+pymssql://nist_ai_user:LIUEkiwsdkuynwxe@xmatch02:1433/NIST_AI?charset=utf8"}
