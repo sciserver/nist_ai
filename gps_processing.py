@@ -27,6 +27,8 @@ import os
 
 import pandas as pd
 
+import job_config as jc
+
 
 # TODO: Maybe this should stream to file instead of loading everything into memory
 #       and then we could also do a bulk import into the database
@@ -45,12 +47,12 @@ def parse_trackaddict_gps(
     - Speed (Km/h)
 
     The function returns a DataFrame with the following columns and types:
-    - Time: float32
-    - UTC Time: float64
-    - Latitude: float64
-    - Longitude: float64
-    - Altitude (m): float32
-    - Speed (Km/h): float32
+    - relative_time: float64
+    - utc_time: float64
+    - latitude: float64
+    - longitude: float64
+    - altitude_m: float32
+    - speed_kmh: float32
 
 
     Args:
@@ -74,7 +76,7 @@ def parse_trackaddict_gps(
         engine="c",
         comment="#",
         dtype={
-            "Time": "float32",
+            "Time": "float64",
             "UTC Time": "float64",
             "Latitude": "float64",
             "Longitude": "float64",
@@ -89,8 +91,26 @@ def parse_trackaddict_gps(
             "Altitude (m)",
             "Speed (Km/h)",
         ],
+    ).rename(
+        columns={
+            "Time": "relative_time",
+            "UTC Time": "utc_time",
+            "Latitude": "latitude",
+            "Longitude": "longitude",
+            "Altitude (m)": "altitude_m",
+            "Speed (Km/h)": "speed_kmh",
+        }
     )
 
 
-def parse_gps_file(gps_file_path: str) -> pd.DataFrame:
-    pass
+def parse_gps_file(
+    gps_file_path: str,
+    video_type: jc.VideoType,
+    logger: logging.Logger = logging.getLogger(__name__),
+) -> pd.DataFrame:
+    if video_type == jc.VideoType.TRACK_ADDICT:
+        return parse_trackaddict_gps(gps_file_path, logger)
+    else:
+        msg = f"Unsupported video type {video_type}"
+        logger.error(msg)
+        raise ValueError(msg)

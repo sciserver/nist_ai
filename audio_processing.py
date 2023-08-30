@@ -23,47 +23,20 @@
 """This module contains functions for processing audio data."""
 
 import dataclasses as dc
-import logging
 import itertools
+import logging
 import os
 import string
 from typing import Any
 
 import pandas as pd
 
-
-@dc.dataclass
-class WhisperConfig:
-    model_name: str = "tiny.en"
-    download_location: str = "."
-    transcribe_kwargs: dict = dc.field(default_factory=dict)
-    valid_model_names: list[str] = dc.field(
-        init=False,
-        default_factory=lambda: [
-            "tiny",
-            "tiny.en",
-            "base",
-            "base.en",
-            "small",
-            "small.en",
-            "medium",
-            "medium.en",
-            "large",
-        ],
-    )
-
-    def __post_init__(self):
-        if not os.path.exists(self.download_location):
-            os.makedirs(self.download_location, exist_ok=True)
-
-        if self.model_name not in self.valid_model_names:
-            msg = f"Invalid model name {self.model_name}. Valid model names are {self.valid_model_names}"
-            raise ValueError(msg)
+import job_config as jc
 
 
 def transcribe_audio_whisper(
     audio_file_path: str,
-    whisper_config: WhisperConfig,
+    whisper_config: jc.WhisperConfig,
     logger: logging.Logger = logging.getLogger(__name__),
 ) -> pd.DataFrame:
     """Transcribes audio using Whisper.
@@ -151,16 +124,20 @@ def transcribe_audio_whisper(
 
 def trascribe_audio(
     audio_file_path: str,
+    model_config: jc.WhisperConfig,
     logger: logging.Logger = logging.getLogger(__name__),
 ) -> pd.DataFrame:
-    pass
+    if type(model_config) == jc.WhisperConfig:
+        return transcribe_audio_whisper(audio_file_path, model_config, logger=logger)
+    else:
+        raise ValueError(f"Invalid model config {model_config}")
 
 
 if __name__ == "__main__":
     print(
         transcribe_audio_whisper(
             "sample_data/audio.mp3",
-            WhisperConfig(
+            jc.WhisperConfig(
                 model_name="tiny.en",
                 download_location=".",
             ),

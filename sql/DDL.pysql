@@ -1,0 +1,72 @@
+-- Creates the required tables for the algorithm
+USE nist_ai;
+
+DECLARE @this_is_dangerous_i_am_sure_that_i_what_to_do_this BIT = {danger};
+
+IF @this_is_dangerous_i_am_sure_that_i_what_to_do_this = 1
+BEGIN
+    PRINT 'Doing dangerous things!';
+
+    IF OBJECT_ID('dbo.video', 'U') IS NOT NULL
+      DROP TABLE dbo.video;
+
+    CREATE TABLE video (
+      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      filename VARCHAR(1024) NOT NULL,
+      checksum VARCHAR(64) NOT NULL,
+      metadata VARCHAR(MAX) NOT NULL, -- JSON
+    );
+
+    IF OBJECT_ID('dbo.audio', 'U') IS NOT NULL
+      DROP TABLE dbo.audio;
+
+    CREATE TABLE audio (
+      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      video_id BIGINT NOT NULL,
+      filename VARCHAR(1024) NOT NULL,
+      checksum VARCHAR(64) NOT NULL,
+      CONSTRAINT FK_audio_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
+    );
+
+    IF OBJECT_ID('dbo.transcription', 'U') IS NOT NULL
+      DROP TABLE dbo.transcription;
+
+    CREATE TABLE transcription (
+      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      audio_id BIGINT NOT NULL,
+      config VARCHAR(MAX) NOT NULL, -- JSON
+      CONSTRAINT FK_transcription_audio_id FOREIGN KEY (audio_id) REFERENCES audio(id) ON DELETE CASCADE,
+    );
+
+    IF OBJECT_ID('dbo.word_segment', 'U') IS NOT NULL
+      DROP TABLE dbo.word_segment;
+
+    CREATE TABLE word_segment (
+      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      transcription_id BIGINT NOT NULL,
+      word VARCHAR(1024) NOT NULL,
+      start_time REAL,
+      end_time REAL,
+      probability REAL,
+      CONSTRAINT FK_word_segment_transcription_id FOREIGN KEY (transcription_id) REFERENCES transcription(id) ON DELETE CASCADE,
+    );
+
+    IF OBJECT_ID('dbo.gps', 'U') IS NOT NULL
+      DROP TABLE dbo.gps;
+
+    CREATE TABLE gps (
+      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      video_id BIGINT NOT NULL,
+      relative_time REAL NOT NULL,
+      utc_time REAL NOT NULL,
+      latitude REAL NOT NULL,
+      longitude REAL NOT NULL,
+      altitude_m FLOAT NOT NULL,
+      speed_kmh FLOAT NOT NULL,
+      CONSTRAINT FK_gps_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
+    )
+END
+ELSE
+BEGIN
+    PRINT 'No danger here!'
+END 
