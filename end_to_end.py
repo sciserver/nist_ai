@@ -23,7 +23,9 @@
 """This module contains the code for end-to-end video processing."""
 
 import dataclasses as dc
+import json
 import logging
+import os
 
 import audio_processing as ap
 import gps_processing as gp
@@ -37,7 +39,7 @@ def process_video(
     video_path: str,
     audio_path: str,
     gps_path: str,
-    repository: repo.BaseRepository,
+    repository: repo.Repository,
     job_config: jc.EndToEndConfig,
     logger: logging.Logger,
 ) -> None:
@@ -58,6 +60,7 @@ def process_video(
 
     # Extract the audio from the video
     vp.extract_audio(video_path, audio_path, logger=logger)
+    video_metadata = vp.get_metadata(video_path, logger=logger)
 
     # transcribe the audio
     # transcript is a dataframe with the columns:
@@ -65,7 +68,7 @@ def process_video(
     # - start: float
     # - end: float
     # - probablity: float
-    transcript = ap.transcribe_audio(
+    word_segments = ap.transcribe_audio(
         audio_path, job_config.transcription_config, logger=logger
     )
 
@@ -79,4 +82,35 @@ def process_video(
     # - speed_kmh: float
     gps_data = gp.extract_gps_data(
         gps_path, job_config.source_video_type, logger=logger
+    )
+
+    # Load the video, audio, and GPS data into the repository
+    fname = lambda f: os.path.split(f)[-1]
+
+    video_kwargs = dict(
+        filename=fname(video_path),
+        checksum=utils.get_checksum(video_path),
+        gps_filename=fname(gps_path),
+        metadata=json.dumps(video_metadata),
+    )
+
+    audio_kwargs = dict(
+        filename=fname(audio_path),
+        checksum=utils.get_checksum(audio_path),
+    )
+
+    transcription_kwargs = dict(
+        config=json.dumps(dc.asdict(job_config.transcription_config)),
+    )
+
+    word_segmentation_kwargs = word_segments.to_dict(orientation="list")
+
+    gps_kwargs = gps_data.to_dict(orientation="list")
+
+    repository.save_data(
+        video_kwargs=video_kwargs,
+        audio_kwargs=audio_kwargs,
+        transcription_kwargs=transcription_kwargs,
+        word_segmentation_kwargs=word_segmentation_kwargs,
+        gps_kwargs=gps_kwargs,
     )

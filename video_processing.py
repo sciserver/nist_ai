@@ -79,6 +79,30 @@ def extract_audio(
     return
 
 
+def get_metadata(
+    video_path: str,
+    logger: logging.Logger = logging.getLogger(__name__),
+) -> dict:
+    """Extracts metadata from a video at `video_path`.
+
+    Args:
+        video_path (str): Path to the video file.
+        logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
+
+    Returns:
+        dict: Dictionary containing the metadata.
+    """
+
+    if not os.path.exists(video_path):
+        msg = f"Video file not found at {video_path}"
+        logger.error(msg)
+        raise FileNotFoundError(msg)
+
+    logger.info(f"Extracting metadata from {video_path}...")
+
+    return ffmpeg.probe(video_path)
+
+
 if __name__ == "__main__":
     logging.basicConfig(
         filename="test.log",

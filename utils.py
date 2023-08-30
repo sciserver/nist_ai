@@ -26,6 +26,7 @@ import hashlib
 import logging
 import os
 
+
 # https://stackoverflow.com/a/39215961/2691018
 class StreamToLogger:
     """This class redirects write calss to a logger."""

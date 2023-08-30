@@ -21,9 +21,10 @@
 # SOFTWARE.
 
 import dataclasses as dc
+import hashlib
 import os
 from enum import Enum
-from typing import Union
+from typing import Optional, Union
 
 VideoType = Enum("VideoType", ["GOPRO", "TRACK_ADDICT"])
 

@@ -11,20 +11,23 @@ BEGIN
       DROP TABLE dbo.video;
 
     CREATE TABLE video (
-      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      id BIGINT IDENTITY(1,1) NOT NULL,
       filename VARCHAR(1024) NOT NULL,
+      gps_filename VARCHAR(1024) NOT NULL,
       checksum VARCHAR(64) NOT NULL,
       metadata VARCHAR(MAX) NOT NULL, -- JSON
+      CONSTRAINT PK_video PRIMARY KEY(id)
     );
 
     IF OBJECT_ID('dbo.audio', 'U') IS NOT NULL
       DROP TABLE dbo.audio;
 
     CREATE TABLE audio (
-      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      id BIGINT IDENTITY(1,1) NOT NULL,
       video_id BIGINT NOT NULL,
       filename VARCHAR(1024) NOT NULL,
       checksum VARCHAR(64) NOT NULL,
+      CONSTRAINT PK_audio PRIMARY KEY(id),
       CONSTRAINT FK_audio_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
     );
 
@@ -32,9 +35,10 @@ BEGIN
       DROP TABLE dbo.transcription;
 
     CREATE TABLE transcription (
-      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      id BIGINT IDENTITY(1,1) NOT NULL,
       audio_id BIGINT NOT NULL,
       config VARCHAR(MAX) NOT NULL, -- JSON
+      CONSTRAINT PK_transcription PRIMARY KEY(id),
       CONSTRAINT FK_transcription_audio_id FOREIGN KEY (audio_id) REFERENCES audio(id) ON DELETE CASCADE,
     );
 
@@ -42,12 +46,13 @@ BEGIN
       DROP TABLE dbo.word_segment;
 
     CREATE TABLE word_segment (
-      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      id BIGINT IDENTITY(1,1) NOT NULL,
       transcription_id BIGINT NOT NULL,
       word VARCHAR(1024) NOT NULL,
       start_time REAL,
       end_time REAL,
       probability REAL,
+      CONSTRAINT PK_word_segment PRIMARY KEY(id),
       CONSTRAINT FK_word_segment_transcription_id FOREIGN KEY (transcription_id) REFERENCES transcription(id) ON DELETE CASCADE,
     );
 
@@ -55,7 +60,7 @@ BEGIN
       DROP TABLE dbo.gps;
 
     CREATE TABLE gps (
-      id BIGINT IDENTITY(1,1) PRIMARY KEY,
+      id BIGINT IDENTITY(1,1) NOT NULL,
       video_id BIGINT NOT NULL,
       relative_time REAL NOT NULL,
       utc_time REAL NOT NULL,
@@ -63,10 +68,11 @@ BEGIN
       longitude REAL NOT NULL,
       altitude_m FLOAT NOT NULL,
       speed_kmh FLOAT NOT NULL,
+      CONSTRAINT PK_gps PRIMARY KEY(id),
       CONSTRAINT FK_gps_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
     )
 END
 ELSE
 BEGIN
     PRINT 'No danger here!'
-END 
+END

@@ -20,33 +20,104 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import json
+from typing import Any, Optional, Union
+
 import pandas as pd
+import sqlalchemy as sqla
 
 import job_config as jc
 
 
-class BaseRepository:
-    def get_video_location(self, video_id: int) -> str:
-        raise NotImplementedError
-
-    def get_audio_location(self, audio_id: int) -> str:
-        raise NotImplementedError
-
-    def add_entry(
+class Repository:
+    def __init__(
         self,
-        job_config: jc.EndToEndConfig,
-        video_path: str,
-        audio_path: str,
-        transcript: pd.DataFrame,
-        gps_data: pd.DataFrame,
-    ) -> None:
-        """Adds an entry to the repository.
+        db_auth_path: Optional[str] = None,
+        db_auth: Optional[dict[str, Union[str, int]]] = None,
+    ) -> "Repository":
 
-        Args:
-            job_config (jc.EndToEndConfig): Job configuration.
-            video_path (str): Path to the video file.
-            audio_path (str): Path to the audio file.
-            transcript (pd.DataFrame): Transcript data with columns: "word", "start", "end", "probability".
-            gps_data (pd.DataFrame): GPS data with columns: "relative_time", "utc_time", "latitude", "longitude", "altitude_m", "speed_kmh".
-        """
-        raise NotImplementedError
+        if (db_auth_path is None and db_auth is None) or (
+            db_auth_path is not None and db_auth is not None
+        ):
+            raise ValueError("Must provide either db_auth_path or db_auth.")
+
+        if db_auth_path is not None:
+            with open(db_auth_path, "r") as f:
+                db_auth = json.load(f)
+
+        self.auth = db_auth
+        self.engine = self.__create_engine()
+        self.base = sqla.orm.automap_base()
+        self.base.prepare(self.engine, reflect=True)
+        self._session = None
+
+        self.Video = self.base.classes.video
+        self.Audio = self.base.classes.audio
+        self.Transcription = self.base.classes.transcription
+        self.WordSegment = self.base.classes.word_segment
+        self.GPS = self.base.classes.gps
+
+    @property
+    def session(self):
+        if self._session is None:
+            self._session = sqla.orm.Session(self.engine)
+        return self._session
+
+    def save_data(
+        self,
+        video_kwwargs: dict[str, Any],
+        audio_kwwargs: dict[str, Any],
+        transcription_kwwargs: dict[str, Any],
+        word_segment_kwwargs: dict[str, Any],
+        gps_kwwargs: dict[str, Any],
+    ) -> None:
+
+        video = self.Video(**video_kwwargs)
+        audio = self.Audio(video=video, **audio_kwwargs)
+        transcription = self.Transcription(audio=audio, **transcription_kwwargs)
+        word_segments = list(
+            map(
+                lambda kwwargs: self.WordSegment(
+                    transcription=transcription, **kwwargs
+                ),
+                word_segment_kwwargs,
+            )
+        )
+        gps_coords = list(
+            map(lambda kwwargs: self.GPS(video=video, **kwwargs), gps_kwwargs)
+        )
+
+        for item in [video, audio, transcription] + word_segments + gps_coords:
+            self.session.add(item)
+
+        self.session.commit()
+
+    def drop_and_create(self, I_AM_SURE_I_WANT_TO_DO_THIS: bool = False) -> None:
+        if I_AM_SURE_I_WANT_TO_DO_THIS:
+            with open("sql/DDL.sql", "r") as f:
+                sql = f.read().format(danger=1)
+            self.execute_update(sql)
+
+    def execute_query(self, sql: str) -> pd.DataFrame:
+        if type(sql) == str:
+            sql = sqla.text(sql)
+        with self.engine.connect() as conn:
+            return pd.read_sql(sql, conn)
+
+    def execute_update(self, statement: str) -> None:
+        if type(statement) == str:
+            statement = sqla.text(statement)
+        with self.engine.connect() as conn:
+            trans = conn.begin()
+            try:
+                result = conn.execute(statement)
+                trans.commit()
+            except:
+                trans.rollback()
+                raise
+        return result
+
+    def __create_engine(self):
+        return sqla.create_engine(
+            f"mssql+pymssql://{self.auth['user']}:{self.auth['pwd']}@{self.auth['host']}:1433/{self.auth['database']}?charset=utf8"
+        )
