@@ -8,9 +8,16 @@ BEGIN
     PRINT 'Doing dangerous things!';
 
     IF OBJECT_ID('dbo.video', 'U') IS NOT NULL
+    BEGIN
+      DROP TABLE dbo.gps;
+      DROP TABLE dbo.word_segment;
+      DROP TABLE dbo.text_segment;
+      DROP TABLE dbo.transcription;
+      DROP TABLE dbo.audio;
       DROP TABLE dbo.video;
+    END
 
-    CREATE TABLE video (
+    CREATE TABLE dbo.video (
       id BIGINT IDENTITY(1,1) NOT NULL,
       filename VARCHAR(1024) NOT NULL,
       gps_filename VARCHAR(1024) NOT NULL,
@@ -19,47 +26,47 @@ BEGIN
       CONSTRAINT PK_video PRIMARY KEY(id)
     );
 
-    IF OBJECT_ID('dbo.audio', 'U') IS NOT NULL
-      DROP TABLE dbo.audio;
-
-    CREATE TABLE audio (
+    CREATE TABLE dbo.audio (
       id BIGINT IDENTITY(1,1) NOT NULL,
       video_id BIGINT NOT NULL,
       filename VARCHAR(1024) NOT NULL,
       checksum VARCHAR(64) NOT NULL,
       CONSTRAINT PK_audio PRIMARY KEY(id),
-      CONSTRAINT FK_audio_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
+      CONSTRAINT FK_audio_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE
     );
 
-    IF OBJECT_ID('dbo.transcription', 'U') IS NOT NULL
-      DROP TABLE dbo.transcription;
-
-    CREATE TABLE transcription (
+    CREATE TABLE dbo.transcription (
       id BIGINT IDENTITY(1,1) NOT NULL,
       audio_id BIGINT NOT NULL,
       config VARCHAR(MAX) NOT NULL, -- JSON
       CONSTRAINT PK_transcription PRIMARY KEY(id),
-      CONSTRAINT FK_transcription_audio_id FOREIGN KEY (audio_id) REFERENCES audio(id) ON DELETE CASCADE,
+      CONSTRAINT FK_transcription_audio_id FOREIGN KEY (audio_id) REFERENCES audio(id) ON DELETE CASCADE
     );
-
-    IF OBJECT_ID('dbo.word_segment', 'U') IS NOT NULL
-      DROP TABLE dbo.word_segment;
-
-    CREATE TABLE word_segment (
+    
+    CREATE TABLE dbo.text_segment (
       id BIGINT IDENTITY(1,1) NOT NULL,
       transcription_id BIGINT NOT NULL,
-      word VARCHAR(1024) NOT NULL,
-      start_time REAL,
-      end_time REAL,
-      probability REAL,
-      CONSTRAINT PK_word_segment PRIMARY KEY(id),
-      CONSTRAINT FK_word_segment_transcription_id FOREIGN KEY (transcription_id) REFERENCES transcription(id) ON DELETE CASCADE,
+      segment VARCHAR(MAX) NOT NULL,
+      start_time REAL NOT NULL,
+      end_time REAL NOT NULL,
+      no_speech_prob REAL NOT NULL,
+      thumbnail VARBINARY(MAX) NOT NULL,
+      CONSTRAINT PK_text_segment PRIMARY KEY(id),
+      CONSTRAINT FK_text_segment_transcription_id FOREIGN KEY (transcription_id) REFERENCES transcription(id) ON DELETE CASCADE
     );
 
-    IF OBJECT_ID('dbo.gps', 'U') IS NOT NULL
-      DROP TABLE dbo.gps;
+    CREATE TABLE dbo.word_segment (
+      id BIGINT IDENTITY(1,1) NOT NULL,
+      text_segment_id BIGINT NOT NULL,
+      word VARCHAR(1024) NOT NULL,
+      start_time REAL NOT NULL,
+      end_time REAL NOT NULL,
+      probability REAL NOT NULL,
+      CONSTRAINT PK_word_segment PRIMARY KEY(id),
+      CONSTRAINT FK_word_segment_text_segment_id FOREIGN KEY (text_segment_id) REFERENCES text_segment(id) ON DELETE CASCADE
+    );
 
-    CREATE TABLE gps (
+    CREATE TABLE dbo.gps (
       id BIGINT IDENTITY(1,1) NOT NULL,
       video_id BIGINT NOT NULL,
       relative_time REAL NOT NULL,
@@ -69,7 +76,7 @@ BEGIN
       altitude_m FLOAT NOT NULL,
       speed_kmh FLOAT NOT NULL,
       CONSTRAINT PK_gps PRIMARY KEY(id),
-      CONSTRAINT FK_gps_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE,
+      CONSTRAINT FK_gps_video_id FOREIGN KEY (video_id) REFERENCES video(id) ON DELETE CASCADE
     )
 END
 ELSE

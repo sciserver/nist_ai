@@ -62,3 +62,4 @@ class WhisperConfig:
 class EndToEndConfig:
     transcription_config: Union[WhisperConfig, None]
     source_video_type: VideoType
+    thumbnail_width:int=300

@@ -38,7 +38,7 @@ def transcribe_audio_whisper(
     audio_file_path: str,
     whisper_config: jc.WhisperConfig,
     logger: logging.Logger = logging.getLogger(__name__),
-) -> pd.DataFrame:
+) -> list[dict[str, Any]]:
     """Transcribes audio using Whisper.
 
     Args:
@@ -47,7 +47,7 @@ def transcribe_audio_whisper(
         logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
 
     Returns:
-        pd.DataFrame: Transcription data with columns: "word", "start", "end", "probability".
+        Tuple[pd.DataFrame, pd.DataFrame]: Transcription data with columns: "word", "start", "end", "probability".
 
     Raises:
         ImportError: If `whisper` is not installed.
@@ -85,7 +85,7 @@ def transcribe_audio_whisper(
     # - "tokens": list[int]
     # - "temperature": float
     # - "avg_logprob": float
-    # - "compression_ration": float
+    # - "compression_ratio": float
     # - "no_speech_prob": float
     # - "words": list[dict]
     # We need the words and their timestamps/scores which are in "words" and have the following keys:
@@ -96,33 +96,63 @@ def transcribe_audio_whisper(
     transcription: dict[str, Any] = model.transcribe(
         audio_file_path, word_timestamps=True, **whisper_config.transcribe_kwargs
     )
-
-    # TODO: add some length checks here
-    words = list(
-        itertools.chain.from_iterable(
-            list(map(lambda v: v["words"], transcription["segments"]))
-        )
-    )
-
+    
+    
+    keep_keys = ["start", "end", "text", "no_speech_prob"]
+    text_segments = list(map(
+        lambda segment: dict(list(filter(lambda item: item[0] in keep_keys, segment.items()))),
+        transcription["segments"],
+    ))
+    
     # Some of the words have whitespace at the beginning and end. Strip it.
     # Also remove punctuation except for apstrohpes.
     keep_punc = "'"
     remove_punc = string.punctuation.replace(keep_punc, "")
     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
-    words_stripped = list(
-        map(
+    
+    text_segments = []
+    for segment in transcription["segments"]:
+        filtered_segment = dict(list(filter(
+            lambda item: item[0] in keep_keys, 
+            segment.items()
+        )))
+        filtered_segment["words"] =  list(map(
             lambda d: {
                 k: v.translate(remove_punc_table) if k == "word" else v
                 for k, v in d.items()
             },
-            words,
-        )
-    )
+            segment["words"],
+        ))
+        text_segments.append(filtered_segment)
+    
+    
 
-    return pd.DataFrame(words_stripped)
+    # TODO: add some length checks here
+#     words = list(
+#         itertools.chain.from_iterable(
+#             list(map(lambda v: v["words"], transcription["segments"]))
+#         )
+#     )
+
+#     # Some of the words have whitespace at the beginning and end. Strip it.
+#     # Also remove punctuation except for apstrohpes.
+#     keep_punc = "'"
+#     remove_punc = string.punctuation.replace(keep_punc, "")
+#     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
+#     words_stripped = list(
+#         map(
+#             lambda d: {
+#                 k: v.translate(remove_punc_table) if k == "word" else v
+#                 for k, v in d.items()
+#             },
+#             words,
+#         )
+#     )
+
+    return text_segments
 
 
-def trascribe_audio(
+def transcribe_audio(
     audio_file_path: str,
     model_config: jc.WhisperConfig,
     logger: logging.Logger = logging.getLogger(__name__),

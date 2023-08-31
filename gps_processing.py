@@ -71,36 +71,79 @@ def parse_trackaddict_gps(
         logger.error(msg)
         raise FileNotFoundError(msg)
 
-    return pd.read_csv(
-        gps_csv_path,
-        engine="c",
-        comment="#",
-        dtype={
-            "Time": "float64",
-            "UTC Time": "float64",
-            "Latitude": "float64",
-            "Longitude": "float64",
-            "Altitude (m)": "float32",
-            "Speed (Km/h)": "float32",
-        },
-        usecols=[
-            "Time",
-            "UTC Time",
-            "Latitude",
-            "Longitude",
-            "Altitude (m)",
-            "Speed (Km/h)",
-        ],
-    ).rename(
-        columns={
-            "Time": "relative_time",
-            "UTC Time": "utc_time",
-            "Latitude": "latitude",
-            "Longitude": "longitude",
-            "Altitude (m)": "altitude_m",
-            "Speed (Km/h)": "speed_kmh",
-        }
-    )
+    df = pd.read_csv(gps_csv_path, engine="c", comment="#")
+    
+    if "Altitude (m)" not in df.columns:
+        if "Altitude (ft)" in df.columns:
+            df["Altitude (m)"] = df["Altitude (ft)"] * 0.3048
+        else:
+            df["Altitude (m)"] = -1.0
+        
+    if "Speed (Km/h)" not in df.columns:
+        if "Speed (MPH)" in df.columns:
+            df["Speed (Km/h)"] = df["Speed (MPH)"] * 1.609344
+        else:
+            df["Speed (Km/h)"] = -1.0
+        
+    keep_cols = [
+        "Time", 
+        "UTC Time", 
+        "Latitude", 
+        "Longitude", 
+        "Altitude (m)", 
+        "Speed (Km/h)"
+    ]
+    
+    col_dtypes = {
+        "Time": "float64",
+        "UTC Time": "float64",
+        "Latitude": "float64",
+        "Longitude": "float64",
+        "Altitude (m)": "float32",
+        "Speed (Km/h)": "float32",
+    }
+    
+    new_col_names = {
+        "Time": "relative_time",
+        "UTC Time": "utc_time",
+        "Latitude": "latitude",
+        "Longitude": "longitude",
+        "Altitude (m)": "altitude_m",
+        "Speed (Km/h)": "speed_kmh",
+    }
+        
+        
+    return df.loc[:, keep_cols].astype(col_dtypes).rename(columns=new_col_names)
+    # return pd.read_csv(
+    #     gps_csv_path,
+    #     engine="c",
+    #     comment="#",
+    #     dtype={
+    #         "Time": "float64",
+    #         "UTC Time": "float64",
+    #         "Latitude": "float64",
+    #         "Longitude": "float64",
+    #         "Altitude (m)": "float32",
+    #         "Speed (Km/h)": "float32",
+    #     },
+    #     usecols=[
+    #         "Time",
+    #         "UTC Time",
+    #         "Latitude",
+    #         "Longitude",
+    #         "Altitude (m)",
+    #         "Speed (Km/h)",
+    #     ],
+    # ).rename(
+    #     columns={
+    #         "Time": "relative_time",
+    #         "UTC Time": "utc_time",
+    #         "Latitude": "latitude",
+    #         "Longitude": "longitude",
+    #         "Altitude (m)": "altitude_m",
+    #         "Speed (Km/h)": "speed_kmh",
+    #     }
+    # )
 
 
 def parse_gps_file(

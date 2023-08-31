@@ -23,6 +23,7 @@
 """This module contains the code for end-to-end video processing."""
 
 import dataclasses as dc
+import functools
 import json
 import logging
 import os
@@ -59,18 +60,35 @@ def process_video(
     logger.info(f"Processing video: {video_path}")
 
     # Extract the audio from the video
-    vp.extract_audio(video_path, audio_path, logger=logger)
-    video_metadata = vp.get_metadata(video_path, logger=logger)
+    with utils.LogTime(logger, "Getting audio/metadata from video"):
+        vp.extract_audio(video_path, audio_path, logger=logger)
+        video_metadata = vp.get_metadata(video_path, logger=logger)
 
     # transcribe the audio
-    # transcript is a dataframe with the columns:
-    # - word: str
+    # text_segments is a list of dicts with the keys:
+    # - text: str
     # - start: float
     # - end: float
-    # - probablity: float
-    word_segments = ap.transcribe_audio(
-        audio_path, job_config.transcription_config, logger=logger
+    # - no_speech_prob: float
+    # - words: dict 
+    # -- word: str
+    # -- start: float
+    # -- end: float
+    # -- probability: float
+    with utils.LogTime(logger, "Transcribing audio"):
+        text_segments = ap.transcribe_audio(
+            audio_path, job_config.transcription_config, logger=logger
+        )
+    
+    
+    thumbnail_f = functools.partial(
+        vp.get_thumbnail, 
+        video_path, 
+        job_config.thumbnail_width,
     )
+    with utils.LogTime(logger, "Getting thumbnails for word segments"):
+        for segment in text_segments:
+            segment["thumbnail"] = thumbnail_f(segment["start"])
 
     # Extract the GPS data from the video
     # gps_data is a dataframe with the columns:
@@ -80,9 +98,10 @@ def process_video(
     # - longitude: float
     # - altitude_m: float
     # - speed_kmh: float
-    gps_data = gp.extract_gps_data(
-        gps_path, job_config.source_video_type, logger=logger
-    )
+    with utils.LogTime(logger, "Parsing gps file"):
+        gps_data = gp.parse_gps_file(
+            gps_path, job_config.source_video_type, logger=logger
+        )
 
     # Load the video, audio, and GPS data into the repository
     fname = lambda f: os.path.split(f)[-1]
@@ -103,14 +122,14 @@ def process_video(
         config=json.dumps(dc.asdict(job_config.transcription_config)),
     )
 
-    word_segmentation_kwargs = word_segments.to_dict(orientation="list")
+    with utils.LogTime(logger, "Converting gps df to list"):
+        gps_kwargs = gps_data.to_dict(orient="records")
 
-    gps_kwargs = gps_data.to_dict(orientation="list")
-
-    repository.save_data(
-        video_kwargs=video_kwargs,
-        audio_kwargs=audio_kwargs,
-        transcription_kwargs=transcription_kwargs,
-        word_segmentation_kwargs=word_segmentation_kwargs,
-        gps_kwargs=gps_kwargs,
-    )
+    with utils.LogTime(logger, "Saving data to repo"):
+        repository.save_data(
+            video_kwargs=video_kwargs,
+            audio_kwargs=audio_kwargs,
+            transcription_kwargs=transcription_kwargs,
+            text_segments_dicts=text_segments,
+            gps_kwargs=gps_kwargs,
+        )
