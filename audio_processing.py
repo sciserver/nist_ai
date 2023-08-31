@@ -27,7 +27,7 @@ import itertools
 import logging
 import os
 import string
-from typing import Any
+from typing import Any, Dict, List
 
 import pandas as pd
 
@@ -38,7 +38,7 @@ def transcribe_audio_whisper(
     audio_file_path: str,
     whisper_config: jc.WhisperConfig,
     logger: logging.Logger = logging.getLogger(__name__),
-) -> list[dict[str, Any]]:
+) -> List[Dict[str, Any]]:
     """Transcribes audio using Whisper.
 
     Args:
@@ -93,61 +93,63 @@ def transcribe_audio_whisper(
     # - "start": float
     # - "end": float
     # - "probability": float
-    transcription: dict[str, Any] = model.transcribe(
+    transcription: Dict[str, Any] = model.transcribe(
         audio_file_path, word_timestamps=True, **whisper_config.transcribe_kwargs
     )
-    
-    
+
     keep_keys = ["start", "end", "text", "no_speech_prob"]
-    text_segments = list(map(
-        lambda segment: dict(list(filter(lambda item: item[0] in keep_keys, segment.items()))),
-        transcription["segments"],
-    ))
-    
+    text_segments = list(
+        map(
+            lambda segment: dict(
+                list(filter(lambda item: item[0] in keep_keys, segment.items()))
+            ),
+            transcription["segments"],
+        )
+    )
+
     # Some of the words have whitespace at the beginning and end. Strip it.
     # Also remove punctuation except for apstrohpes.
     keep_punc = "'"
     remove_punc = string.punctuation.replace(keep_punc, "")
     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
-    
+
     text_segments = []
     for segment in transcription["segments"]:
-        filtered_segment = dict(list(filter(
-            lambda item: item[0] in keep_keys, 
-            segment.items()
-        )))
-        filtered_segment["words"] =  list(map(
-            lambda d: {
-                k: v.translate(remove_punc_table) if k == "word" else v
-                for k, v in d.items()
-            },
-            segment["words"],
-        ))
+        filtered_segment = dict(
+            list(filter(lambda item: item[0] in keep_keys, segment.items()))
+        )
+        filtered_segment["words"] = list(
+            map(
+                lambda d: {
+                    k: v.translate(remove_punc_table) if k == "word" else v
+                    for k, v in d.items()
+                },
+                segment["words"],
+            )
+        )
         text_segments.append(filtered_segment)
-    
-    
 
     # TODO: add some length checks here
-#     words = list(
-#         itertools.chain.from_iterable(
-#             list(map(lambda v: v["words"], transcription["segments"]))
-#         )
-#     )
+    #     words = list(
+    #         itertools.chain.from_iterable(
+    #             list(map(lambda v: v["words"], transcription["segments"]))
+    #         )
+    #     )
 
-#     # Some of the words have whitespace at the beginning and end. Strip it.
-#     # Also remove punctuation except for apstrohpes.
-#     keep_punc = "'"
-#     remove_punc = string.punctuation.replace(keep_punc, "")
-#     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
-#     words_stripped = list(
-#         map(
-#             lambda d: {
-#                 k: v.translate(remove_punc_table) if k == "word" else v
-#                 for k, v in d.items()
-#             },
-#             words,
-#         )
-#     )
+    #     # Some of the words have whitespace at the beginning and end. Strip it.
+    #     # Also remove punctuation except for apstrohpes.
+    #     keep_punc = "'"
+    #     remove_punc = string.punctuation.replace(keep_punc, "")
+    #     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
+    #     words_stripped = list(
+    #         map(
+    #             lambda d: {
+    #                 k: v.translate(remove_punc_table) if k == "word" else v
+    #                 for k, v in d.items()
+    #             },
+    #             words,
+    #         )
+    #     )
 
     return text_segments
 

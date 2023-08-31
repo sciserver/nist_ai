@@ -6,7 +6,6 @@ import end_to_end
 import job_config as jc
 import repository as repo
 
-
 logging.basicConfig(
     filename="demo_log.txt",
     filemode="a",
@@ -17,26 +16,24 @@ logging.basicConfig(
 
 
 def run():
-    ffmpeg_binaries = '/home/idies/workspace/nist_ai/extras/ffmpeg-6.0-amd64-static'
+    ffmpeg_binaries = "/home/idies/workspace/nist_ai/extras/ffmpeg-6.0-amd64-static"
     assert os.path.exists(ffmpeg_binaries)
-    os.environ["PATH"] =  f"{ffmpeg_binaries}:" + os.environ["PATH"]
-    
-    
+    os.environ["PATH"] = f"{ffmpeg_binaries}:" + os.environ["PATH"]
+
     base_path = "/home/idies/workspace/nist_ai/data/video/Tanya"
     with_base = functools.partial(os.path.join, base_path)
 
-    video_path = with_base("Log-20230726-142137 strip mall.mp4")
-    audio_path = with_base("Log-20230726-142137 strip mall.mp3")
-    gps_path = with_base("Log-20230726-142137 strip mall - Interpolated.csv")
+    video_path = with_base("Log-20230726-150129 apartments.mp4")
+    audio_path = with_base("Log-20230726-150129 apartments.mp3")
+    gps_path = with_base("Log-20230726-150129 apartments - Interpolated.csv")
 
     repository = repo.Repository(
         db_auth_path="nist-ai.json",
-        DROP_AND_CREATE_DANGER=True,
+        DROP_AND_CREATE_DANGER=False,  # this drops and creates tables
     )
 
-    
     job_config = jc.EndToEndConfig(
-        transcription_config=jc.WhisperConfig(),
+        transcription_config=jc.WhisperConfig(model_name="large"),
         source_video_type=jc.VideoType.TRACK_ADDICT,
         thumbnail_width=300,
     )

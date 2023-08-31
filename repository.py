@@ -22,12 +22,12 @@
 
 import json
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import sqlalchemy as sqla
-import sqlalchemy.orm as orm
 import sqlalchemy.ext.automap as automap
+import sqlalchemy.orm as orm
 
 import job_config as jc
 
@@ -36,7 +36,7 @@ class Repository:
     def __init__(
         self,
         db_auth_path: Optional[str] = None,
-        db_auth: Optional[dict[str, Union[str, int]]] = None,
+        db_auth: Optional[Dict[str, Union[str, int]]] = None,
         DROP_AND_CREATE_DANGER: Optional[bool] = False,
     ) -> "Repository":
         if (db_auth_path is None and db_auth is None) or (
@@ -71,51 +71,49 @@ class Repository:
             self._session = orm.Session(self.engine)
         return self._session
 
-    
-    def get_video(self, 
-        video_id:Optional[int] = None, 
-        checksum:Optional[str] = None,
-     ) -> Union[Any, None]:
-        
+    def get_video(
+        self,
+        video_id: Optional[int] = None,
+        checksum: Optional[str] = None,
+    ) -> Union[Any, None]:
         both_none = video_id is None and checksum is None
         both_given = video_id is not None and checksum is not None
         if both_given or both_none:
             raise ValueError("Must specify `video_id` OR `checksum`")
-            
+
         if video_id:
-            stmt = sqla.select(self.Video).where(self.Video.id==video_id)
-        
+            stmt = sqla.select(self.Video).where(self.Video.id == video_id)
+
         if checksum:
-            stmt = sqla.select(self.Video).where(self.Video.checksum==checksum)
-        
+            stmt = sqla.select(self.Video).where(self.Video.checksum == checksum)
+
         return self.session.scalars(stmt).one_or_none()
-        
-    def get_audio(self, 
-        audio_id:Optional[int] = None, 
-        checksum:Optional[str] = None,
-     ) -> Union[Any, None]:
-        
+
+    def get_audio(
+        self,
+        audio_id: Optional[int] = None,
+        checksum: Optional[str] = None,
+    ) -> Union[Any, None]:
         both_none = audio_id is None and checksum is None
         both_given = audio_id is not None and checksum is not None
         if both_given or both_none:
             raise ValueError("Must specify `audio_id` OR `checksum`")
-            
+
         if audio_id:
-            stmt = sqla.select(self.Audio).where(self.Audio.id==audio_id)
-        
+            stmt = sqla.select(self.Audio).where(self.Audio.id == audio_id)
+
         if checksum:
-            stmt = sqla.select(self.Audio).where(self.Audio.checksum==checksum)
-        
+            stmt = sqla.select(self.Audio).where(self.Audio.checksum == checksum)
+
         return self.session.scalars(stmt).one_or_none()
-        
-    
+
     def save_data(
         self,
-        video_kwargs: dict[str, Any],
-        audio_kwargs: dict[str, Any],
-        transcription_kwargs: dict[str, Any],
-        text_segments_dicts: list[dict[str, Any]],
-        gps_kwargs: list[dict[str, Any]],
+        video_kwargs: Dict[str, Any],
+        audio_kwargs: Dict[str, Any],
+        transcription_kwargs: Dict[str, Any],
+        text_segments_dicts: List[Dict[str, Any]],
+        gps_kwargs: List[Dict[str, Any]],
         logger: Optional[logging.Logger] = logging.getLogger(__name__),
     ) -> None:
         if (video := self.get_video(checksum=video_kwargs["checksum"])) is None:
@@ -131,7 +129,7 @@ class Repository:
             logger.info(f"Audio exists in database id = {audio.id}")
 
         transcription = self.Transcription(audio=audio, **transcription_kwargs)
-        
+
         text_segments = []
         word_segments = []
         for ts in text_segments_dicts:
@@ -143,7 +141,7 @@ class Repository:
                 no_speech_prob=ts["no_speech_prob"],
                 thumbnail=ts["thumbnail"],
             )
-            
+
             for word in ts["words"]:
                 word_segment = self.WordSegment(
                     text_segment=text_segment,
@@ -154,13 +152,15 @@ class Repository:
                 )
                 word_segments.append(word_segment)
             text_segments.append(text_segment)
-            
+
         gps_coords = list(
             map(lambda kwargs: self.GPS(video=video, **kwargs), gps_kwargs)
         )
 
         logger.info("Saving items to session")
-        for item in [video, audio, transcription] + text_segments + word_segments + gps_coords:
+        for item in (
+            [video, audio, transcription] + text_segments + word_segments + gps_coords
+        ):
             self.session.add(item)
 
         logger.info("Committing")

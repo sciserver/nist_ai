@@ -24,7 +24,7 @@ import dataclasses as dc
 import hashlib
 import os
 from enum import Enum
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 VideoType = Enum("VideoType", ["GOPRO", "TRACK_ADDICT"])
 
@@ -34,7 +34,7 @@ class WhisperConfig:
     model_name: str = "tiny.en"
     download_location: str = "."
     transcribe_kwargs: dict = dc.field(default_factory=dict)
-    valid_model_names: list[str] = dc.field(
+    valid_model_names: List[str] = dc.field(
         init=False,
         default_factory=lambda: [
             "tiny",
@@ -62,4 +62,4 @@ class WhisperConfig:
 class EndToEndConfig:
     transcription_config: Union[WhisperConfig, None]
     source_video_type: VideoType
-    thumbnail_width:int=300
+    thumbnail_width: int = 300

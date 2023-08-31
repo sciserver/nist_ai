@@ -103,12 +103,15 @@ def get_metadata(
     return ffmpeg.probe(video_path)
 
 
-def get_thumbnail(video_path:str, width:int, time:float,) -> bytes:
+def get_thumbnail(
+    video_path: str,
+    width: int,
+    time: float,
+) -> bytes:
     out, _ = (
-        ffmpeg
-        .input(video_path, ss=time)
-        .filter('scale', width, -1)
-        .output('pipe:', format='image2', vcodec='png', vframes=1)
+        ffmpeg.input(video_path, ss=time)
+        .filter("scale", width, -1)
+        .output("pipe:", format="image2", vcodec="png", vframes=1)
         .run(capture_stdout=True, capture_stderr=True)
     )
     return out

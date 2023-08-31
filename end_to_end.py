@@ -70,7 +70,7 @@ def process_video(
     # - start: float
     # - end: float
     # - no_speech_prob: float
-    # - words: dict 
+    # - words: dict
     # -- word: str
     # -- start: float
     # -- end: float
@@ -79,11 +79,10 @@ def process_video(
         text_segments = ap.transcribe_audio(
             audio_path, job_config.transcription_config, logger=logger
         )
-    
-    
+
     thumbnail_f = functools.partial(
-        vp.get_thumbnail, 
-        video_path, 
+        vp.get_thumbnail,
+        video_path,
         job_config.thumbnail_width,
     )
     with utils.LogTime(logger, "Getting thumbnails for word segments"):
