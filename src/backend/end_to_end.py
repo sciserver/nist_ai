@@ -28,12 +28,12 @@ import json
 import logging
 import os
 
-import audio_processing as ap
-import gps_processing as gp
-import job_config as jc
-import repository as repo
-import utils
-import video_processing as vp
+import src.backend.audio_processing as ap
+import src.backend.gps_processing as gp
+import src.backend.job_config as jc
+import src.backend.repository as repo
+import src.backend.utils as utils
+import src.backend.video_processing as vp
 
 
 def process_video(
@@ -55,7 +55,14 @@ def process_video(
 
     Args:
         video_path (str): Path to the video file.
+        audio_path (str): Path to save the audio file.
+        gps_path (str): Path to the GPS data file.
+        repository (repo.Repository): Repository object.
+        job_config (jc.EndToEndConfig): Job configuration object.
         logger (logging.Logger): Logger object.
+
+    Returns:
+        None
     """
     logger.info(f"Processing video: {video_path}")
 
@@ -103,17 +110,18 @@ def process_video(
         )
 
     # Load the video, audio, and GPS data into the repository
-    fname = lambda f: os.path.split(f)[-1]
+    def get_fname(f: str) -> str:
+        return os.path.split(f)[-1]
 
     video_kwargs = dict(
-        filename=fname(video_path),
+        filename=get_fname(video_path),
         checksum=utils.get_checksum(video_path),
-        gps_filename=fname(gps_path),
+        gps_filename=get_fname(gps_path),
         metadata=json.dumps(video_metadata),
     )
 
     audio_kwargs = dict(
-        filename=fname(audio_path),
+        filename=get_fname(audio_path),
         checksum=utils.get_checksum(audio_path),
     )
 

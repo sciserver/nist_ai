@@ -22,16 +22,12 @@
 
 """This module contains functions for processing audio data."""
 
-import dataclasses as dc
-import itertools
 import logging
 import os
 import string
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-import pandas as pd
-
-import job_config as jc
+import src.backend.job_config as jc
 
 
 def transcribe_audio_whisper(
@@ -44,10 +40,11 @@ def transcribe_audio_whisper(
     Args:
         audio_file_path (str): Path to the audio file.
         whisper_config (WhisperConfig): Whisper configuration.
-        logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
+        logger (logging.Logger, optional): Logger object.
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Transcription data with columns: "word", "start", "end", "probability".
+        List[Dict[str, Any]]: List of dictionaries containing the
+                              transcribed text and metadata.
 
     Raises:
         ImportError: If `whisper` is not installed.
@@ -58,7 +55,10 @@ def transcribe_audio_whisper(
     try:
         import whisper
     except ImportError:
-        msg = "whisper not installed. Please install it using `pip install -U openai-whisper`"
+        msg = (
+            "whisper not installed."
+            "Please install it using `pip install -U openai-whisper`"
+        )
         logger.error(msg)
         raise ImportError(msg)
 
@@ -76,7 +76,8 @@ def transcribe_audio_whisper(
     # - "text": str
     # - "language": str
     # - "segments": list[dict]
-    # We only the "segments" which is list of dictionaries with the following keys:
+    # We only the "segments" which is list of dictionaries with the
+    # following keys:
     # - "id": int
     # - "seek": float
     # - "start": float
@@ -88,7 +89,8 @@ def transcribe_audio_whisper(
     # - "compression_ratio": float
     # - "no_speech_prob": float
     # - "words": list[dict]
-    # We need the words and their timestamps/scores which are in "words" and have the following keys:
+    # We need the words and their timestamps/scores which are in "words" and
+    # have the following keys:
     # - "word": str
     # - "start": float
     # - "end": float
@@ -130,26 +132,6 @@ def transcribe_audio_whisper(
         text_segments.append(filtered_segment)
 
     # TODO: add some length checks here
-    #     words = list(
-    #         itertools.chain.from_iterable(
-    #             list(map(lambda v: v["words"], transcription["segments"]))
-    #         )
-    #     )
-
-    #     # Some of the words have whitespace at the beginning and end. Strip it.
-    #     # Also remove punctuation except for apstrohpes.
-    #     keep_punc = "'"
-    #     remove_punc = string.punctuation.replace(keep_punc, "")
-    #     remove_punc_table = str.maketrans("", "", remove_punc + string.whitespace)
-    #     words_stripped = list(
-    #         map(
-    #             lambda d: {
-    #                 k: v.translate(remove_punc_table) if k == "word" else v
-    #                 for k, v in d.items()
-    #             },
-    #             words,
-    #         )
-    #     )
 
     return text_segments
 
@@ -157,21 +139,23 @@ def transcribe_audio_whisper(
 def transcribe_audio(
     audio_file_path: str,
     model_config: jc.WhisperConfig,
-    logger: logging.Logger = logging.getLogger(__name__),
-) -> pd.DataFrame:
-    if type(model_config) == jc.WhisperConfig:
+    logger: Optional[logging.Logger] = logging.getLogger(__name__),
+) -> List[Dict[str, Any]]:
+    """Transcribes audio using the specified model.
+
+    Args:
+        audio_file_path (str): Path to the audio file.
+        model_config (WhisperConfig): Model configuration.
+        logger (logging.Logger, optional): Logger object.
+
+    Returns:
+        List[Dict[str, Any]]: List of dictionaries containing the transcribed
+                              text and metadata.
+
+    Raises:
+        ValueError: If `model_config` is not a `WhisperConfig`.
+    """
+    if isinstance(model_config, jc.WhisperConfig):
         return transcribe_audio_whisper(audio_file_path, model_config, logger=logger)
     else:
         raise ValueError(f"Invalid model config {model_config}")
-
-
-if __name__ == "__main__":
-    print(
-        transcribe_audio_whisper(
-            "sample_data/audio.mp3",
-            jc.WhisperConfig(
-                model_name="tiny.en",
-                download_location=".",
-            ),
-        )
-    )

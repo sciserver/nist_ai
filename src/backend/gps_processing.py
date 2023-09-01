@@ -24,10 +24,11 @@
 
 import logging
 import os
+from typing import Optional
 
 import pandas as pd
 
-import job_config as jc
+import src.backend.job_config as jc
 
 
 # TODO: Maybe this should stream to file instead of loading everything into memory
@@ -65,7 +66,6 @@ def parse_trackaddict_gps(
     Raises:
         FileNotFoundError: If `gps_csv_path` does not exist.
     """
-
     if not os.path.exists(gps_csv_path):
         msg = f"File not found at {gps_csv_path}"
         logger.error(msg)
@@ -118,8 +118,28 @@ def parse_trackaddict_gps(
 def parse_gps_file(
     gps_file_path: str,
     video_type: jc.VideoType,
-    logger: logging.Logger = logging.getLogger(__name__),
+    logger: Optional[logging.Logger] = logging.getLogger(__name__),
 ) -> pd.DataFrame:
+    """Parses GPS data from a file.
+
+    Args:
+        gps_file_path (str): Path to the GPS file.
+        video_type (jc.VideoType): The type of video that the GPS file is
+                                   associated with.
+        logger (logging.Logger, optional): Logger object.
+
+    Returns:
+        pd.DataFrame: GPS data.
+
+    Raises:
+        FileNotFoundError: If `gps_file_path` does not exist.
+        ValueError: If `video_type` is not supported.
+    """
+    if not os.path.exists(gps_file_path):
+        msg = f"File not found at {gps_file_path}"
+        logger.error(msg)
+        raise FileNotFoundError(msg)
+
     if video_type == jc.VideoType.TRACK_ADDICT:
         return parse_trackaddict_gps(gps_file_path, logger)
     else:

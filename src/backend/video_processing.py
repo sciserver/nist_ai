@@ -24,16 +24,14 @@
 
 import logging
 import os
-import sys
 
 try:
     import ffmpeg  # ffmpeg-python
 except ImportError:
     raise ImportError(
-        "ffmpeg-python not installed. Please install it using `pip install ffmpeg-python`"
+        "ffmpeg-python not installed."
+        "Please install it using `pip install ffmpeg-python`"
     )
-
-import utils
 
 
 def extract_audio(
@@ -47,8 +45,8 @@ def extract_audio(
     Args:
         video_path (str): Path to the video file.
         audio_path (str): Path to save the audio file.
-        logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
-        overwrite (bool, optional): Whether to overwrite the existing audio file. Defaults to False.
+        logger (logging.Logger, optional): Logger object.
+        overwrite (bool, optional): Should overwrite the existing audio file.
 
     Returns:
         None
@@ -56,7 +54,6 @@ def extract_audio(
     Raises:
         FileNotFoundError: If `video_path` does not exist.
     """
-
     if not os.path.exists(video_path):
         msg = f"Video file not found at {video_path}"
         logger.error(msg)
@@ -73,8 +70,8 @@ def extract_audio(
         .output(audio_path)
         .run(capture_stdout=True, capture_stderr=True)
     )
-    logger.info(f"ffmpeg stdout:" + stdout.decode())
-    logger.error(f"ffmpeg stderr:" + stderr.decode())
+    logger.info("ffmpeg stdout:" + stdout.decode())
+    logger.error("ffmpeg stderr:" + stderr.decode())
 
     return
 
@@ -87,12 +84,11 @@ def get_metadata(
 
     Args:
         video_path (str): Path to the video file.
-        logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
+        logger (logging.Logger, optional): Logger object.
 
     Returns:
         dict: Dictionary containing the metadata.
     """
-
     if not os.path.exists(video_path):
         msg = f"Video file not found at {video_path}"
         logger.error(msg)
@@ -108,6 +104,19 @@ def get_thumbnail(
     width: int,
     time: float,
 ) -> bytes:
+    """Extracts a thumbnail from  `video_path` at `time`.
+
+    Args:
+        video_path (str): Path to the video file.
+        width (int): Width of the thumbnail.
+        time (float): Time in seconds to extract the thumbnail.
+
+    Returns:
+        bytes: Thumbnail image data.
+
+    Raises:
+        FileNotFoundError: If `video_path` does not exist.
+    """
     out, _ = (
         ffmpeg.input(video_path, ss=time)
         .filter("scale", width, -1)

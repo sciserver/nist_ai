@@ -22,42 +22,60 @@
 
 """This module contains helper functions and classes."""
 
+import contextlib
 import hashlib
 import logging
 import os
+import sys
 import time
 from typing import Union
 
 
 # https://stackoverflow.com/a/39215961/2691018
 class StreamToLogger:
-    """This class redirects write calss to a logger."""
+    """This class redirects write class to a logger."""
 
     def __init__(
         self, logger: logging.Logger, level: Union[int, str]
     ) -> "StreamToLogger":
+        """This class redirects write class to a logger.
+
+        Args:
+            logger (logging.Logger): The logger instance to use for logging
+            level (Union[int, str]): The logging level to use
+
+        Returns:
+            StreamToLogger: The StreamToLogger instance
+        """
         self.logger = logger
         self.level = level
         self.linebuf = ""
 
     def write(self, buf: str) -> None:
+        """Writes to the logger.
+
+        Args:
+            buf (str): The string to write to the logger
+
+        Returns:
+            None
+        """
         for line in buf.rstrip().splitlines():
             self.logger.log(self.level, line.rstrip())
 
     def flush(self) -> None:
+        """Flushes the logger.
+
+        Returns:
+            None
+        """
         pass
 
 
-import sys
-
 # https://stackoverflow.com/a/54955536
-from contextlib import contextmanager
-
-
-@contextmanager
+@contextlib.contextmanager
 def stdout_redirector(stdout: StreamToLogger, stderr: StreamToLogger):
-    """This function redirects stdout and stderr to a logger using"""
-
+    """This function redirects stdout and stderr to a logger using."""
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     sys.stdout = stdout
@@ -77,7 +95,6 @@ class LogTime:
     level and errors are logged at the FATAL level.
 
     Example:
-
     >>> import logging
     >>> logger = logging.getLogger("example")
     >>>
@@ -85,7 +102,6 @@ class LogTime:
     >>>     a = 2 + 2
 
     The log file will look something like (depending on your formatting):
-
     >>> Starting Calculating Sum
     >>> Completed in 7.62939453125e-06 seconds
     """
@@ -102,10 +118,12 @@ class LogTime:
         self.task_str = task_str
 
     def __enter__(self):
+        """Logs the start of the task."""
         self.logger.info(f"Starting {self.task_str}")
         self.start = time.time()
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Logs the end of the task and any exceptions that occurred."""
         if exc_type is None:
             self.logger.info(f"Completed in {time.time() - self.start} seconds")
         else:
@@ -120,7 +138,7 @@ def get_checksum(
 
     Args:
         file_name (str): Path to the file.
-        logger (logging.Logger, optional): Logger object. Defaults to logging.getLogger(__name__).
+        logger (logging.Logger, optional): Logger object.
 
     Returns:
         str: Checksum of the file.
@@ -128,7 +146,6 @@ def get_checksum(
     Raises:
         FileNotFoundError: If `file_name` does not exist.
     """
-
     if not os.path.exists(file_name):
         msg = f"File not found at {file_name}"
         logger.error(msg)

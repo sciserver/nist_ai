@@ -1,0 +1,6 @@
+SELECT
+    id,
+    filename,
+    metadata
+FROM dbo.video
+WHERE id={video_id}

@@ -1,0 +1,21 @@
+WITH id_helper AS (
+    SELECT
+        a.video_id AS video_id,
+        a.id AS audio_id,
+        t.id AS transcription_id
+    FROM dbo.transcription t
+    LEFT JOIN dbo.audio a ON t.audio_id=a.id
+)
+
+SELECT
+    t.id,
+    t.transcription_id,
+    t.segment,
+    t.no_speech_prob,
+    t.start_time AS time_start,
+    t.end_time AS time_end,
+    t.thumbnail,
+    i.video_id
+FROM dbo.text_segment t
+LEFT JOIN id_helper i ON t.transcription_id=i.transcription_id
+WHERE t.segment LIKE '%[^a-zA-Z]{query}%'

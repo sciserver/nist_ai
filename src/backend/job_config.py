@@ -20,17 +20,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""Configuration classes for running the backend code."""
+
 import dataclasses as dc
-import hashlib
 import os
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Union
 
 VideoType = Enum("VideoType", ["GOPRO", "TRACK_ADDICT"])
 
 
 @dc.dataclass
 class WhisperConfig:
+    """Configuration for the whisper speech-to-text model."""
+
     model_name: str = "tiny.en"
     download_location: str = "."
     transcribe_kwargs: dict = dc.field(default_factory=dict)
@@ -50,16 +53,22 @@ class WhisperConfig:
     )
 
     def __post_init__(self):
+        """Validates the model name and download location."""
         if not os.path.exists(self.download_location):
             os.makedirs(self.download_location, exist_ok=True)
 
         if self.model_name not in self.valid_model_names:
-            msg = f"Invalid model name {self.model_name}. Valid model names are {self.valid_model_names}"
+            msg = (
+                f"Invalid model name {self.model_name}."
+                f"Valid model names are {self.valid_model_names}"
+            )
             raise ValueError(msg)
 
 
 @dc.dataclass
 class EndToEndConfig:
+    """Configuration for the end-to-end pipeline."""
+
     transcription_config: Union[WhisperConfig, None]
     source_video_type: VideoType
     thumbnail_width: int = 300

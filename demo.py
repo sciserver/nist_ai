@@ -2,9 +2,10 @@ import functools
 import logging
 import os
 
-import end_to_end
-import job_config as jc
-import repository as repo
+import src.backend.end_to_end as end_to_end
+import src.backend.job_config as jc
+import src.backend.repository as repo
+
 
 logging.basicConfig(
     filename="demo_log.txt",
@@ -50,5 +51,20 @@ def run():
     )
 
 
+def run_ui():
+    import dash
+    import src.frontend.dash as ui
+    import src.test.backend.mock_repo as mock_repo
+
+    app = ui.build_app(
+        dash_cls=dash.Dash,
+        name="test",
+        repo=mock_repo.MockRepositoryForUI(),
+    )
+
+    app.run()
+
+
 if __name__ == "__main__":
-    run()
+    # run()
+    run_ui()

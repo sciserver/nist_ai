@@ -3,7 +3,7 @@
 ### Requires
 
 ```
-python -m pip install -U openai-whisper
+python -m pip install -U openai-whisper dash-bootstrap-components dash-extensions dash-leaflet
 mamba install -y pymssql
 ```
 
@@ -18,7 +18,7 @@ Run `CUDA_VISIBLE_DEVICES=[GPU_ID] python demo.py`
 Want to make changes?
 
 ```
-mamba install -y black isort
+mamba install -y black isort flake8 flake8-docstrings
 ```
 
 Before committing and pushing:
@@ -26,4 +26,5 @@ Before committing and pushing:
 ```
 black .
 isort .
+flake8 .
 ```

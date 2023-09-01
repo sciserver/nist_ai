@@ -1,0 +1,17 @@
+WITH locs_time AS (
+    SELECT
+        latitude,
+        longitude,
+        relative_time AS time
+    FROM dbo.gps
+    WHERE video_id={video_id}
+)
+
+
+SELECT
+    latitude,
+    longitude,
+    time
+FROM locs_time
+WHERE time BETWEEN {time_start} AND {time_end}
+ORDER BY time
