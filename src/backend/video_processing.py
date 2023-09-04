@@ -138,3 +138,67 @@ if __name__ == "__main__":
     logger = logging.getLogger("test")
 
     extract_audio("vid.mp4", "audio.mp3", logger)
+
+
+def save_clip(
+    video_path: str,
+    start: float,
+    end: float,
+    output_path: str,
+) -> None:
+    """Extracts a clip from  `video_path`.
+
+    This will overwrite the file at `output_path` if it already exists.
+
+    Args:
+        video_path (str): Path to the video file.
+        start (float): Start time in seconds to extract the clip.
+        end (float): End time in seconds to extract the clip.
+        output_path (str): Path to save the clip file.
+
+    Returns:
+        None
+
+    Raises:
+        FileNotFoundError: If `video_path` does not exist.
+        ValueError: If `start` is negative.
+        ValueError: If `start` is greater than `end`.
+        ValueError: If `end` - `start` is less than 1 second.
+    """
+    if not os.path.exists(video_path):
+        FileNotFoundError(f"Video file not found at {video_path}")
+
+    if start < 0:
+        ValueError("Start time cannot be negative.")
+
+    if start > end:
+        ValueError("Start time cannot be greater than end time.")
+
+    if end - start < 1:
+        ValueError("Clip duration cannot be less than 1 second.")
+
+    (
+        ffmpeg.input(video_path, ss=start, to=end)
+        .output(output_path)
+        .run(overwrite_output=True, quiet=True)
+    )
+    return
+
+
+def get_video_length(video_path: str) -> float:
+    """Returns the length of the video at `video_path` in seconds.
+
+    Args:
+        video_path (str): Path to the video file.
+
+    Returns:
+        float: Length of the video in seconds. -1 if length cannot be determined.
+
+    Raises:
+        FileNotFoundError: If `video_path` does not exist.
+    """
+    if not os.path.exists(video_path):
+        FileNotFoundError(f"Video file not found at {video_path}")
+
+    metadata = ffmpeg.probe(video_path)
+    return float(metadata.get("format", {}).get("duration", -1))

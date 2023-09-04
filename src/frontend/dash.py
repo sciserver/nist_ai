@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 
 import src.backend.repository as repo
+import src.backend.video_processing as vp
 
 PLACEHOLDER_THUMBNAIL = dbc.Card(
     color="secondary",
@@ -53,6 +54,15 @@ DEFAULT_MAP = dl.Map(
 )
 
 REPO_SINGLETON: repo.Repository = None
+
+POINT_TO_LAYER = dash_js.assign(
+    """function(feature, latlng, context){
+    const {min, max, colorscale, circleOptions, colorProp} = context.hideout;
+    const csc = chroma.scale(colorscale).domain([min, max]);
+    circleOptions.fillColor = csc(feature.properties[colorProp]);
+    return L.circleMarker(latlng, circleOptions);
+}"""
+)
 
 
 def build_app(
@@ -80,15 +90,18 @@ def build_app(
 
     """
     needed_js = [
-        "assets/scripts/chroma-js/chroma.min.js",
-        "assets/scripts/dashLeafletHelper.js",
+        "./assets/js/chroma-js/chroma.min.js",
+        "./assets/js/dashLeafletHelper.js",
     ]
 
     global REPO_SINGLETON
     REPO_SINGLETON = repo
 
+    import os
+
     app = dash_cls(
-        name,
+        __name__,
+        assets_folder=os.path.join(os.getcwd(), "assets"),
         external_scripts=needed_js + scripts,
         external_stylesheets=stylesheets,
         prevent_initial_callbacks=True,
@@ -116,9 +129,8 @@ def build_app(
                                 style={"width": "100%", "maxWidth": "600px"},
                                 disable_n_clicks=True,
                                 src="",
-                                preload="metadata",
-                                autoPlay=False,
-                                muted=False,
+                                autoPlay=True,
+                                muted=True,
                                 loop=True,
                             ),
                         ],
@@ -221,7 +233,7 @@ def convert_search_result_to_button(
     else:
         td = datetime.timedelta(seconds=0)
 
-    return dbc.Card(
+    card = dbc.Card(
         [
             dbc.CardLink(
                 dbc.Row(
@@ -237,7 +249,7 @@ def convert_search_result_to_button(
                         # center segment text
                         dbc.Col(
                             highlight(
-                                row["segment"],
+                                row["text"],
                                 q,
                             ),
                         ),
@@ -265,6 +277,8 @@ def convert_search_result_to_button(
             )
         ]
     )
+
+    return card
 
 
 @dash.callback(
@@ -294,11 +308,10 @@ def search_form_submitted(n_submit: int, q: str) -> List[dbc.ListGroupItem]:
     # thumbnail - the thumbnail in a byte string
     # video_id - the video id in the data base
     segments = REPO_SINGLETON.query_text_segments(q)
-
     # IF the query doesn't return any results show some default text defined at the tops
     if len(segments) > 0:
         convert_f = functools.partial(convert_search_result_to_button, q)
-        segment_rows = segments.apply(convert_f, axis=1)
+        segment_rows = list(segments.apply(convert_f, axis=1))
     else:
         segment_rows = [dbc.ListGroupItem("No text found matching input.")]
 
@@ -335,34 +348,26 @@ def search_result_clicked_update_video(
 
     if not any(n_clicks_timestamps):
         return ""
-        # return [
-        #     dash.html.Video(
-        #         src="",
-        #         id="video",
-        #         controls=True,
-        #         style={"width":"100%"},
-        #         disable_n_clicks=True,
-        #     )
-        # ]
 
     # the most recently clicked index will have the largest timestamp
     index = n_clicks_timestamps.index(max(n_clicks_timestamps))
     video_id = ids[index]["video_id"]
-
     global REPO_SINGLETON
-    video_path = "./" + REPO_SINGLETON.query_video_path_by_id(video_id)
+    video_path = REPO_SINGLETON.query_video_path_by_id(video_id)
     offset = ids[index]["offset"]
 
-    # return [
-    #     dash.html.Video(
-    #         src=video_path,
-    #         id="video",
-    #         controls=True,
-    #         style={"width":"100%"},
-    #         disable_n_clicks=True,
-    #     )
-    # ]
-    return video_path + f"#t={offset-2},{offset+2}"
+    length = vp.get_video_length(video_path)
+
+    start_time = max(offset - 2, 0)
+    end_time = min(offset + 2, length)
+
+    use_clip = False
+    if use_clip:
+        save_path = "assets/tmp/tmp.mp4"
+        vp.save_clip(video_path, start_time, end_time, save_path)
+        return save_path
+    else:
+        return video_path + f"#t={start_time},{end_time}"
 
 
 @dash.callback(
@@ -402,24 +407,43 @@ def search_result_clicked_update_thumbnails(
     video_id = selected_segment["video_id"]
 
     global REPO_SINGLETON
-    video_path = "./" + REPO_SINGLETON.query_video_path(video_id)
+    video_path = REPO_SINGLETON.query_video_path_by_id(video_id)
     offset = ids[index]["offset"]
 
+    # this needs to be checked properly
+    length = vp.get_video_length(video_path)
+
+    start_time = max(offset - 5, 0)
+    end_time = min(offset + 5, length)
+
     # TODO: check for max time
-    frame_seconds = np.linspace(max(offset - 5, 0), min(offset + 5, 100000), 10)
+    frame_seconds = np.linspace(start_time, end_time, 10)
+    thmb_f = functools.partial(vp.get_thumbnail, video_path, 300)
+
+    import time
+
+    start = time.time()
+    thumbnails = list(
+        map(
+            lambda buffer: "data:image/png;base64,"
+            + base64.b64encode(buffer).decode("ASCII"),
+            map(thmb_f, frame_seconds),
+        )
+    )
+    print(f"Time to get thumbnails: {time.time() - start}")
 
     # this needs to be switched to ffmpeg
-    vidcap = cv2.VideoCapture(video_path)
+    # vidcap = cv2.VideoCapture(video_path)
 
-    frames = []
-    for time in frame_seconds:
-        vidcap.set(cv2.CAP_PROP_POS_MSEC, time * 1000)
-        success, image = vidcap.read()
-        if success:
-            _, buffer = cv2.imencode(".png", image)
-            frames.append(
-                "data:image/png;base64," + base64.b64encode(buffer).decode("ASCII")
-            )
+    # frames = []
+    # for time in frame_seconds:
+    #     vidcap.set(cv2.CAP_PROP_POS_MSEC, time * 1000)
+    #     success, image = vidcap.read()
+    #     if success:
+    #         _, buffer = cv2.imencode(".png", image)
+    #         frames.append(
+    #             "data:image/png;base64," + base64.b64encode(buffer).decode("ASCII")
+    #         )
 
     return list(
         map(
@@ -428,7 +452,7 @@ def search_result_clicked_update_thumbnails(
                     dbc.CardImg(src=src, style={"width": "100px", "height": "50px"})
                 )
             ),
-            frames,
+            thumbnails,
         )
     )
 
@@ -479,11 +503,11 @@ def search_result_clicked_update_map(
     )
 
     if len(gps_coords) > 0:
-        # adapted from: https://dash-leaflet.herokuapp.com/#scatter_plot
+        # adapted: https://www.dash-leaflet.com/docs/geojson_tutorial#a-scatter-plot
 
         gps_coords["tooltip"] = gps_coords["time"].apply(lambda t: f"{t:+} secs")
 
-        geojson = dlx.dicts_to_geojson(gps_coords.to_dict("rows"), lon="lon")
+        geojson = dlx.dicts_to_geojson(gps_coords.to_dict("records"), lon="lon")
         geobuf = dlx.geojson_to_geobuf(geojson)
 
         colorscale = ["red", "yellow", "green", "blue", "purple"]  # rainbow
@@ -496,14 +520,13 @@ def search_result_clicked_update_map(
             max=gps_coords["time"].max(),
             unit="sec",
         )
-        ns = dash_js.Namespace("myNamespace", "mySubNamespace")
 
         geojson = dl.GeoJSON(
             data=geobuf,
             id="geojson",
             format="geobuf",
             zoomToBounds=True,  # when true, zooms to bounds when data changes
-            options=dict(pointToLayer=ns("pointToLayer2")),  # how to draw points
+            pointToLayer=POINT_TO_LAYER,  # how to draw points
             # superClusterOptions=dict(radius=50),   # adjust cluster size
             hideout=dict(
                 colorProp=color_prop,
@@ -553,4 +576,5 @@ def highlight(text: str, search: str) -> str:
     els = re.split(f"(\\b{search})", text, flags=re.IGNORECASE)
     for i in range(1, len(els), 2):
         els[i] = dbc.Badge(els[i])
+
     return els

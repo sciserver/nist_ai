@@ -6,7 +6,6 @@ import src.backend.end_to_end as end_to_end
 import src.backend.job_config as jc
 import src.backend.repository as repo
 
-
 logging.basicConfig(
     filename="demo_log.txt",
     filemode="a",
@@ -53,7 +52,8 @@ def run():
 
 def run_ui():
     import dash
-    import src.frontend.dash as ui
+
+    import src.frontend.dash_v2 as ui
     import src.test.backend.mock_repo as mock_repo
 
     app = ui.build_app(
@@ -62,7 +62,8 @@ def run_ui():
         repo=mock_repo.MockRepositoryForUI(),
     )
 
-    app.run()
+    # app.enable_dev_tools(debug=True)
+    app.run(debug=True)
 
 
 if __name__ == "__main__":

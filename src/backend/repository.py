@@ -329,8 +329,8 @@ class Repository:
         Returns:
             str: The video path if found, otherwise an empty string
         """
-        if (video := self.get_video(id=video_id)) is None:
-            return video.filename
+        if (val := self.get_video(id=video_id)) is not None:
+            return val.filename
         else:
             return ""
 

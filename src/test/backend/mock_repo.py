@@ -101,7 +101,7 @@ class MockRepositoryForUI:
         Returns:
             str: The video path if found, otherwise an empty string
         """
-        return self.vid_df.loc[self.vid_df["video_id"] == video_id, "filename"].iloc[0]
+        return self.vid_df.loc[self.vid_df["id"] == video_id, "filename"].iloc[0]
 
     def query_gps_coords(
         self, video_id: int, time_start: float, time_end: float
@@ -152,6 +152,7 @@ class MockRepositoryForUI:
                     video_id=1,
                     time_start=100,
                     time_end=110,
+                    thumbnail="",
                     text="This video is about books.",
                 ),
                 dict(
@@ -159,6 +160,7 @@ class MockRepositoryForUI:
                     video_id=1,
                     time_start=200,
                     time_end=210,
+                    thumbnail="",
                     text="This part is also about books.",
                 ),
                 dict(
@@ -166,6 +168,7 @@ class MockRepositoryForUI:
                     video_id=2,
                     time_start=100,
                     time_end=110,
+                    thumbnail="",
                     text="This video is about bombs.",
                 ),
                 dict(
@@ -173,6 +176,7 @@ class MockRepositoryForUI:
                     video_id=2,
                     time_start=200,
                     time_end=210,
+                    thumbnail="",
                     text="This part is also about bombs.",
                 ),
             ]
@@ -183,38 +187,38 @@ class MockRepositoryForUI:
         return pd.DataFrame(
             [
                 dict(
-                    latitude=48.858592314273785,
-                    longitude=2.2932544065215748,
+                    lat=48.858592314273785,
+                    lon=2.2932544065215748,
                     time=102,
                     video_id=1,
                 ),
                 dict(
-                    latitude=48.858128333256964,
-                    longitude=2.2939913625693746,
+                    lat=48.858128333256964,
+                    lon=2.2939913625693746,
                     time=104,
                     video_id=1,
                 ),
                 dict(
-                    latitude=48.857599389651696,
-                    longitude=2.294844680098407,
+                    lat=48.857599389651696,
+                    lon=2.294844680098407,
                     time=106,
                     video_id=1,
                 ),
                 dict(
-                    latitude=52.4594335626035,
-                    longitude=4.552019317265759,
+                    lat=52.4594335626035,
+                    lon=4.552019317265759,
                     time=102,
                     video_id=2,
                 ),
                 dict(
-                    latitude=52.450477438977614,
-                    longitude=4.555406513604146,
+                    lat=52.450477438977614,
+                    lon=4.555406513604146,
                     time=104,
                     video_id=2,
                 ),
                 dict(
-                    latitude=52.44099455767272,
-                    longitude=4.557301047149346,
+                    lat=52.44099455767272,
+                    lon=4.557301047149346,
                     time=106,
                     video_id=2,
                 ),
