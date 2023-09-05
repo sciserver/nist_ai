@@ -49,12 +49,13 @@ def run():
         logger=logger,
     )
 
+    # app.enable_dev_tools(
 
-def run_ui():
+
+def run_local_ui():
     import dash
 
     import src.frontend.dash_v2 as ui
-    import src.test.backend.mock_repo as mock_repo
 
     app = ui.build_app(
         dash_cls=dash.Dash,
@@ -68,4 +69,4 @@ def run_ui():
 
 if __name__ == "__main__":
     # run()
-    run_ui()
+    run_sciserver_ui()

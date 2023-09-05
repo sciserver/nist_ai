@@ -125,12 +125,20 @@ class Repository:
             raise ValueError("Must specify `video_id` OR `checksum`")
 
         if video_id:
-            stmt = sqla.select(self.Video).where(self.Video.id == video_id)
+            vals = self.execute_query(
+                self.get_sql("query_get_video_by_checksum.pysql").format(
+                    video_id=video_id
+                )
+            )
 
         if checksum:
-            stmt = sqla.select(self.Video).where(self.Video.checksum == checksum)
+            vals = self.execute_query(
+                self.get_sql("query_get_video_by_checksum.pysql").format(
+                    checksum=checksum
+                )
+            )
 
-        return self.session.scalars(stmt).one_or_none()
+        return vals.iloc[0, :] if len(vals) else None
 
     def get_audio(
         self,
@@ -329,8 +337,9 @@ class Repository:
         Returns:
             str: The video path if found, otherwise an empty string
         """
-        if (val := self.get_video(id=video_id)) is not None:
-            return val.filename
+        if (val := self.get_video(video_id=video_id)) is not None:
+            # TODO: this needs to be programmitically set for 'track_addict'/'gopro'
+            return os.path.join("assets", "videos", "track_addict", val.filename)
         else:
             return ""
 

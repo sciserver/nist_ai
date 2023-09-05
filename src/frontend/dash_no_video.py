@@ -39,17 +39,10 @@ import pandas as pd
 import src.backend.repository as repo
 import src.backend.video_processing as vp
 
-PLACEHOLDER_THUMBNAIL = dbc.Card(
-    color="secondary",
-    style={"width": "100px", "height": "50px"},
-)
-PLACEHOLDER_THUMBNAILS = list(
-    map(lambda _: dbc.ListGroupItem(PLACEHOLDER_THUMBNAIL), range(5))
-)
-
 DEFAULT_MAP = dl.Map(
     dl.TileLayer(),
-    zoom=0,
+    center=[39.135107, -77.218065],
+    zoom=14,
     style={"width": "100%", "aspectRatio": "1/1"},
 )
 
@@ -122,29 +115,14 @@ def build_app(
             dbc.Col(
                 [
                     dbc.Spinner(
-                        children=[
-                            dash.html.Video(
-                                id="video",
-                                controls=True,
-                                style={"width": "100%", "maxWidth": "600px"},
-                                # disable_n_clicks=True,
-                                src="",
-                                autoPlay=True,
-                                muted=True,
-                                loop=True,
-                            ),
-                        ],
-                        id="video-container",
-                    ),
-                    dbc.Spinner(
-                        dbc.ListGroup(
-                            children=PLACEHOLDER_THUMBNAILS,
-                            horizontal=True,
-                            style={
-                                "overflowX": "scroll",
-                                "width": "100%",
-                                "maxWidth": "600px",
-                            },
+                        dbc.Carousel(
+                            items=[
+                                dict(
+                                    key="1", src="assets/img/carousel_placeholder.svg"
+                                ),
+                            ],
+                            controls=True,
+                            indicators=True,
                             id="video-thumbnails",
                         )
                     ),
@@ -248,10 +226,12 @@ def convert_search_result_to_button(
                         ),
                         # center segment text
                         dbc.Col(
-                            highlight(
-                                row["segment"],
-                                q,
-                            ),
+                            dbc.CardBody(
+                                highlight(
+                                    row["segment"],
+                                    q,
+                                ),
+                            )
                         ),
                         # right side timestamp
                         dbc.Col(
@@ -319,62 +299,10 @@ def search_form_submitted(n_submit: int, q: str) -> List[dbc.ListGroupItem]:
 
 
 @dash.callback(
-    dash.Output("video", "src"),
-    dash.Input(
-        {"type": "search-result", "video_id": dash.ALL, "offset": dash.ALL},
-        "n_clicks_timestamp",
-    ),
-    dash.State(
-        {"type": "search-result", "video_id": dash.ALL, "offset": dash.ALL}, "id"
-    ),
-    prevent_initial_call=True,
-)
-def search_result_clicked_update_video(
-    n_clicks_timestamps: List[Union[None, int]],
-    ids: List[dict],
-) -> dash.html.Video:
-    """Callback for when a search result is clicked, updates video element.
-
-    Args:
-        n_clicks_timestamps (List[Union[None, int]]): List of timestamps for when
-                                                      each search result was clicked.
-        ids (List[dict]): List of ids for each search result.
-
-    Returns:
-        dash.html.Video: The video element with the src set to the video path.
-    """
-    # convert None to 0
-    n_clicks_timestamps = list(map(lambda idx: idx if idx else 0, n_clicks_timestamps))
-
-    if not any(n_clicks_timestamps):
-        return ""
-
-    # the most recently clicked index will have the largest timestamp
-    index = n_clicks_timestamps.index(max(n_clicks_timestamps))
-    video_id = ids[index]["video_id"]
-    global REPO_SINGLETON
-    video_path = REPO_SINGLETON.query_video_path_by_id(video_id)
-    offset = ids[index]["offset"]
-
-    length = vp.get_video_length(video_path)
-
-    start_time = max(offset - 2, 0)
-    end_time = min(offset + 2, length)
-
-    use_clip = True
-    if use_clip:
-        import os
-
-        os.makedirs("assets/tmp", exist_ok=True)
-        save_path = "assets/tmp/tmp.mp4"
-        vp.save_clip(video_path, start_time, end_time, save_path)
-        return save_path
-    else:
-        return video_path + f"#t={start_time},{end_time}"
-
-
-@dash.callback(
-    dash.Output("video-thumbnails", "children"),
+    [
+        dash.Output("video-thumbnails", "items"),
+        dash.Output("video-thumbnails", "active_index"),
+    ],
     dash.Input(
         {"type": "search-result", "video_id": dash.ALL, "offset": dash.ALL},
         "n_clicks_timestamp",
@@ -402,7 +330,10 @@ def search_result_clicked_update_thumbnails(
     n_clicks_timestamps = list(map(lambda idx: idx if idx else 0, n_clicks_timestamps))
 
     if not any(n_clicks_timestamps):
-        return dbc.ListGroupItem("Thumnails not found.")
+        return (
+            [{"key": "1", "src": "assets/img/carousel_placeholder-click_result.svg"}],
+            0,
+        )
 
     # the most recently clicked index will have the largest timestamp
     index = n_clicks_timestamps.index(max(n_clicks_timestamps))
@@ -420,8 +351,8 @@ def search_result_clicked_update_thumbnails(
     end_time = min(offset + 5, length)
 
     # TODO: check for max time
-    frame_seconds = np.linspace(start_time, end_time, 10)
-    thmb_f = functools.partial(vp.get_thumbnail, video_path, 300)
+    frame_seconds = np.linspace(start_time, end_time, 11)
+    thmb_f = functools.partial(vp.get_thumbnail, video_path, 0)
 
     import time
 
@@ -435,29 +366,11 @@ def search_result_clicked_update_thumbnails(
     )
     print(f"Time to get thumbnails: {time.time() - start}")
 
-    # this needs to be switched to ffmpeg
-    # vidcap = cv2.VideoCapture(video_path)
+    idxs = list(range(1, len(thumbnails) + 1))
+    items = [{"key": str(i), "src": t} for i, t in zip(idxs, thumbnails)]
 
-    # frames = []
-    # for time in frame_seconds:
-    #     vidcap.set(cv2.CAP_PROP_POS_MSEC, time * 1000)
-    #     success, image = vidcap.read()
-    #     if success:
-    #         _, buffer = cv2.imencode(".png", image)
-    #         frames.append(
-    #             "data:image/png;base64," + base64.b64encode(buffer).decode("ASCII")
-    #         )
-
-    return list(
-        map(
-            lambda src: dbc.ListGroupItem(
-                dbc.Card(
-                    dbc.CardImg(src=src, style={"width": "100px", "height": "50px"})
-                )
-            ),
-            thumbnails,
-        )
-    )
+    center_idx = 6
+    return items, center_idx
 
 
 @dash.callback(
@@ -579,7 +492,20 @@ def highlight(text: str, search: str) -> str:
         str: Text with `search` highlighted.
     """
     els = re.split(f"(\\b{search})", text, flags=re.IGNORECASE)
-    for i in range(1, len(els), 2):
-        els[i] = dbc.Badge(els[i])
 
-    return els
+    styled_elements = []
+    for e in els:
+        if e.lower() == search.lower():
+            styled_elements.append(dbc.Badge(e, color="primary"))
+        else:
+            styled_elements.append(dash.html.Span(e, style={"color": "black"}))
+            # styled_elements.append(r'<span style="color: black">{}</span>'.format(e))
+
+    return styled_elements
+
+
+#     print(els)
+#     for i in range(1, len(els), 2):
+#         els[i] = dbc.Badge(els[i], color="primary")
+
+#     return els

@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""This module contains the base UI"""
+"""This module contains the base UI."""
 
 import os
 from typing import List
@@ -28,7 +28,6 @@ from typing import List
 import dash
 import dash_bootstrap_components as dbc
 import dash_leaflet as dl
-import dash_leaflet.express as dlx
 
 import src.backend.repository as repo
 
@@ -69,7 +68,6 @@ def build_app(
         "./assets/js/dashLeafletHelper.js",
     ]
 
-
     global REPO_SINGLETON
     REPO_SINGLETON = repo
 
@@ -81,64 +79,82 @@ def build_app(
         prevent_initial_callbacks=True,
     )
 
-    app.layout = dbc.Col([
-        dbc.Row([
-            dbc.Col([], width=2),
-            dbc.Col([
-                dash.html.Img(src="https://www.nist.gov/libraries/nist-component-library/dist/img/logo/NIST-Logo-Brand-White.svg"),
-            ], width=8),
-            dbc.Col([], width=2),
-        ]),
-        dbc.Row([build_search()]),
-        dbc.Row([
-            dbc.Col([], width=2),
-            dbc.Col([
-                build_search_results()
-            ], width=5),
-            dbc.Col([
-                build_map()
-            ], width=3),
-            dbc.Col([], width=2),
-        ]),
-    ])
+    app.layout = dbc.Col(
+        [
+            dbc.Row(
+                [
+                    dbc.Col([], width=2),
+                    dbc.Col(
+                        [
+                            dash.html.Img(
+                                src=(
+                                    "https://www.nist.gov/libraries"
+                                    "/nist-component-library/dist/img/logo"
+                                    "/NIST-Logo-Brand-White.svg"
+                                )
+                            ),
+                        ],
+                        width=8,
+                    ),
+                    dbc.Col([], width=2),
+                ]
+            ),
+            dbc.Row([build_search()]),
+            dbc.Row(
+                [
+                    dbc.Col([], width=2),
+                    dbc.Col([build_search_results()], width=5),
+                    dbc.Col([build_map()], width=3),
+                    dbc.Col([], width=2),
+                ]
+            ),
+        ]
+    )
 
     return app
 
 
 def build_search() -> dbc.Form:
-    return dbc.Form([
-        dbc.Row([
-            dbc.Col([], width=2),
-            dbc.Col([
-                dbc.Input(id="query", type="text", placeholder="Search")
-            ], width=5),
-            dbc.Col([
-                dbc.Button("Search")
-            ], width=3),
-            dbc.Col([], width=2),
-        ])
-    ], id="search-form")
+    """Builds the search interface."""
+    return dbc.Form(
+        [
+            dbc.Row(
+                [
+                    dbc.Col([], width=2),
+                    dbc.Col(
+                        [dbc.Input(id="query", type="text", placeholder="Search")],
+                        width=5,
+                    ),
+                    dbc.Col([dbc.Button("Search")], width=3),
+                    dbc.Col([], width=2),
+                ]
+            )
+        ],
+        id="search-form",
+    )
+
 
 def build_search_results():
+    """Build search results layout."""
     return dash.dash_table.DataTable(
         id="search-results",
         filter_action="native",
         sort_action="native",
     )
 
+
 def build_map():
+    """Builds the map layout."""
     return DEFAULT_MAP
 
+
 @dash.callback(
-    [
-        dash.Output("search-results", "data"),
-        dash.Output('search-results', 'columns')
-    ],
+    [dash.Output("search-results", "data"), dash.Output("search-results", "columns")],
     dash.Input("search-form", "n_submit"),
     dash.State("query", "value"),
     prevent_initial_call=True,
 )
-def search_form_submitted(n_submit:int, query:str):
+def search_form_submitted(n_submit: int, query: str):
     """Callback for when the search form is submitted.
 
     Args:
@@ -153,6 +169,6 @@ def search_form_submitted(n_submit:int, query:str):
     segments = REPO_SINGLETON.query_text_segments(query)
 
     return (
-        segments.to_dict('records'),
+        segments.to_dict("records"),
         [{"name": i, "id": i} for i in segments.columns],
     )

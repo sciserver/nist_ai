@@ -117,12 +117,19 @@ def get_thumbnail(
     Raises:
         FileNotFoundError: If `video_path` does not exist.
     """
-    out, _ = (
-        ffmpeg.input(video_path, ss=time)
-        .filter("scale", width, -1)
-        .output("pipe:", format="image2", vcodec="png", vframes=1)
-        .run(capture_stdout=True, capture_stderr=True)
-    )
+    if width == 0:
+        out, _ = (
+            ffmpeg.input(video_path, ss=time)
+            .output("pipe:", format="image2", vcodec="png", vframes=1)
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+    else:
+        out, _ = (
+            ffmpeg.input(video_path, ss=time)
+            .filter("scale", width, -1)
+            .output("pipe:", format="image2", vcodec="png", vframes=1)
+            .run(capture_stdout=True, capture_stderr=True)
+        )
     return out
 
 

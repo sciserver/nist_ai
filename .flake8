@@ -5,3 +5,4 @@ exclude =
     .git,
     __pycache__
     demo.py
+    .ipynb_checkpoints

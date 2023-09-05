@@ -1,0 +1,3 @@
+SELECT *
+FROM dbo.video
+WHERE checksum={checksum}
