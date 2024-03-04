@@ -1,0 +1,5 @@
+- try to get csv from go pro file [are those even go pro files?]
+- lint/back for enforcing style guide (flint, lake?) (gpt for writing doc string)
+- gps data, how many gps points found & words (log whether wav is found or made)
+- document backend code
+- clean run so that tables are created if they don't exist
